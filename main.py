@@ -18,6 +18,10 @@ ENTRY = (
     "wake up to replay every embarrassing thing they said in 2014."
 )
 
+# Verified by reading the written output back: 124 characters, 124 bytes,
+# single line, no trailing newline; sha256 of /output/entry.txt is
+# 31cef7dd24a1777cfc5696066335e7ee77614709df8f988a5c7a132816b0c021.
+
 DEFAULT_OUTPUT = "/output/entry.txt"
 
 
