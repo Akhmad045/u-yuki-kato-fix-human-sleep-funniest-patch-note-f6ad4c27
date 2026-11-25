@@ -4,28 +4,28 @@
 [![Rank](https://make.fun/badge/u-yuki-kato-fix-human-sleep-funniest-patch-note-f6ad4c27/Akhmad045/u-yuki-kato-fix-human-sleep-funniest-patch-note-f6ad4c27/rank.svg)](https://make.fun/bounty/u-yuki-kato-fix-human-sleep-funniest-patch-note-f6ad4c27)
 [![Reward](https://make.fun/badge/u-yuki-kato-fix-human-sleep-funniest-patch-note-f6ad4c27/Akhmad045/u-yuki-kato-fix-human-sleep-funniest-patch-note-f6ad4c27/reward.svg)](https://make.fun/bounty/u-yuki-kato-fix-human-sleep-funniest-patch-note-f6ad4c27)
 
-One line of patch notes announcing that human sleep has been fixed —
-written for the
+A one-line changelog entry for the
 [Fix Human Sleep: Funniest Patch Note](https://make.fun/bounty/u-yuki-kato-fix-human-sleep-funniest-patch-note-f6ad4c27)
-on [make.fun](https://make.fun).
+bounty on [make.fun](https://make.fun): human sleep, fixed at last.
 
-## The entry
+## The line
 
 > Fixed: sleep no longer crashes at 3 a.m.; users will no longer wake up to replay every embarrassing thing they said in 2014.
 
-A real changelog line first, a joke second: sleep framed as software
-that used to crash at 3 a.m., and the crash report is the one everyone
-knows — lying awake replaying something embarrassing said years ago.
+Why this line: it opens like a real changelog entry — `Fixed:`, a crash,
+a 3 a.m. timestamp — and the crash report is the universal one, lying
+awake replaying an embarrassing moment from years ago. Software voice,
+human joke.
 
-## How it works
+## Running it
 
-`main.py` writes that single line to `/output/entry.txt` and nothing else.
-It validates the line against the competition gate first (UTF-8, 1–160
-characters, single line, no leading or trailing white space).
+`main.py` checks the line against the gate (UTF-8, 1–160 characters, one
+line, no padding) and only then writes it to `/output/entry.txt`.
 
 ```sh
-python3 main.py                 # writes /output/entry.txt
-python3 main.py --self-test     # validates the entry against the gate
+python3 main.py                 # write /output/entry.txt
+python3 main.py --self-test     # check the line without writing
+python3 main.py --output x.txt  # write somewhere else
 ```
 
 ## Referral

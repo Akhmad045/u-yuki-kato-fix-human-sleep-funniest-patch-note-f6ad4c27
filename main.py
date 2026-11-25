@@ -1,114 +1,104 @@
 #!/usr/bin/env python3
-"""Fix Human Sleep: Funniest Patch Note — entry program.
+"""Fix Human Sleep: Funniest Patch Note.
 
-Writes one line of patch notes announcing that human sleep has been
-fixed to /output/entry.txt. The line must pass the gate: UTF-8 text of
-1 to 160 characters, not only white space, a single line.
+Writes the entry — one line of patch notes announcing that human sleep
+has been fixed — to /output/entry.txt.
 
-Usage:
-    python3 main.py [--output PATH] [--self-test]
+The line has to clear the gate before anything is written: UTF-8 text,
+between 1 and 160 characters, exactly one line, with no padding at
+either end and no trailing newline in the file.
+
+    python3 main.py                          writes /output/entry.txt
+    python3 main.py --self-test              checks the line, writes nothing
+    python3 main.py --output somewhere.txt   writes somewhere else
 """
 
-import argparse
-import os
 import sys
+import tempfile
+from pathlib import Path
 
-ENTRY = (
+NOTE = (
     "Fixed: sleep no longer crashes at 3 a.m.; users will no longer "
     "wake up to replay every embarrassing thing they said in 2014."
 )
 
-# Verified by reading the written output back: 124 characters, 124 bytes,
-# single line, no trailing newline; sha256 of /output/entry.txt is
-# 31cef7dd24a1777cfc5696066335e7ee77614709df8f988a5c7a132816b0c021.
-
-DEFAULT_OUTPUT = "/output/entry.txt"
+LIMIT = 160
+TARGET = Path("/output/entry.txt")
 
 
-def validate(text):
-    """Check the entry against the competition gate. Returns a list of
-    problems (empty when valid)."""
-    problems = []
-    if not isinstance(text, str):
-        return ["entry is not text"]
-    if not (1 <= len(text) <= 160):
-        problems.append(
-            "length %d characters, must be 1-160" % len(text))
-    if not text.strip():
-        problems.append("entry is only white space")
-    if text != text.strip():
-        problems.append("leading or trailing white space")
-    if "\n" in text or "\r" in text:
-        problems.append("entry must be a single line")
-    if any(ord(ch) < 0x20 and ch not in "\t" for ch in text):
-        problems.append("entry contains control characters")
+def faults(line):
+    """Return every way `line` breaks the gate, or [] when it clears it."""
+    bad = []
+    if len(line) < 1 or len(line) > LIMIT:
+        bad.append("line is %d characters; the gate allows 1-%d"
+                   % (len(line), LIMIT))
+    if line != line.strip():
+        bad.append("line has leading or trailing whitespace")
+    if not line.strip():
+        bad.append("line is blank")
+    if "\n" in line or "\r" in line:
+        bad.append("line spans more than one line")
+    for ch in line:
+        if ord(ch) < 32 and ch != "\t":
+            bad.append("line holds a control character")
+            break
     try:
-        text.encode("utf-8")
-    except UnicodeEncodeError as exc:
-        problems.append("entry is not valid UTF-8: %s" % exc)
-    return problems
+        line.encode("utf-8")
+    except UnicodeEncodeError as err:
+        bad.append("line is not UTF-8: %s" % err)
+    return bad
 
 
-def write_entry(path):
-    problems = validate(ENTRY)
-    if problems:
-        for problem in problems:
-            print("gate failure: %s" % problem, file=sys.stderr)
+def emit(path):
+    """Write NOTE to `path` after it clears the gate, then read it back."""
+    found = faults(NOTE)
+    if found:
+        for item in found:
+            print("gate: %s" % item, file=sys.stderr)
         return 1
-    directory = os.path.dirname(path)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(ENTRY)
-    # Read it back: a write that silently truncates or mangles the line
-    # must fail loudly here, not pass the gate check on a stale file.
-    with open(path, "r", encoding="utf-8", newline="") as handle:
-        written = handle.read()
-    if written != ENTRY:
-        print("gate failure: wrote %r, read back %r"
-              % (ENTRY, written), file=sys.stderr)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(NOTE, encoding="utf-8")
+    again = path.read_text(encoding="utf-8")
+    if again != NOTE:
+        print("gate: wrote %r but read back %r" % (NOTE, again),
+              file=sys.stderr)
         return 1
-    print("wrote %d characters (%d bytes) to %s"
-          % (len(ENTRY), len(ENTRY.encode("utf-8")), path))
+    print("wrote %d chars (%d bytes) -> %s"
+          % (len(NOTE), len(NOTE.encode("utf-8")), path))
     return 0
 
 
-def self_test():
-    """Validate the entry text and a round-trip write/read."""
-    problems = validate(ENTRY)
-    import tempfile
-    with tempfile.TemporaryDirectory() as tmp:
-        probe = os.path.join(tmp, "entry.txt")
-        if write_entry(probe) != 0:
-            problems.append("write failed")
-        else:
-            with open(probe, "rb") as handle:
-                raw = handle.read()
-            decoded = raw.decode("utf-8")
-            if decoded != ENTRY:
-                problems.append("round-trip mismatch")
-            if raw.endswith(b"\n"):
-                problems.append("output ends with a newline")
-    if problems:
-        for problem in problems:
-            print("self-test FAIL: %s" % problem, file=sys.stderr)
+def check_only():
+    """Prove the line and a full write/read round trip, writing nothing."""
+    found = faults(NOTE)
+    with tempfile.TemporaryDirectory() as folder:
+        probe = Path(folder) / "entry.txt"
+        if emit(probe) != 0:
+            found.append("round-trip write failed")
+        elif probe.read_bytes().endswith(b"\n"):
+            found.append("file ends with a newline")
+    if found:
+        for item in found:
+            print("self-test FAIL: %s" % item, file=sys.stderr)
         return 1
-    print("self-test OK: %d chars, %d bytes, single line, no padding"
-          % (len(ENTRY), len(ENTRY.encode("utf-8"))))
+    print("self-test OK: %d chars, %d bytes, one line, no padding"
+          % (len(NOTE), len(NOTE.encode("utf-8"))))
     return 0
 
 
-def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", default=DEFAULT_OUTPUT,
-                        help="where to write the entry (default: %(default)s)")
-    parser.add_argument("--self-test", action="store_true",
-                        help="validate the entry against the gate and exit")
-    args = parser.parse_args(argv)
-    if args.self_test:
-        return self_test()
-    return write_entry(args.output)
+def run(argv):
+    args = list(argv)
+    if "--self-test" in args:
+        return check_only()
+    out = TARGET
+    if "--output" in args:
+        where = args.index("--output")
+        if where + 1 >= len(args):
+            print("usage: main.py [--self-test] [--output PATH]",
+                  file=sys.stderr)
+            return 2
+        out = Path(args[where + 1])
+    return emit(out)
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+sys.exit(run(sys.argv[1:]))
